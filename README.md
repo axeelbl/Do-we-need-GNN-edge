@@ -52,9 +52,3 @@ python src/main.py
 `main.py` inicializa la semilla, asegura los directorios necesarios y escribe
 un fichero `src/results/metrics.json` con el estado inicial del experimento.
 
-## Siguiente fase
-
-El siguiente paso natural es implementar `src/data/cifar_loader.py` con
-`torchvision.datasets.CIFAR10`, transformaciones basicas y loaders de train/test.
-Despues se podra anadir un extractor de caracteristicas simple y construir el
-primer grafo con vecinos cercanos.
