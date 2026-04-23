@@ -1,0 +1,16 @@
+{
+  "full_gnn": {
+    "train_loss": 2.3038840293884277,
+    "train_accuracy": 0.149,
+    "test_accuracy": 0.14333333333333334,
+    "inference_time": 0.011343899997882545,
+    "num_parameters": 411146
+  },
+  "tiny_gnn": {
+    "train_loss": 2.303325653076172,
+    "train_accuracy": 0.11,
+    "test_accuracy": 0.10333333333333333,
+    "inference_time": 0.0038720000302419066,
+    "num_parameters": 98666
+  }
+}
