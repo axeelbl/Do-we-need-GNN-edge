@@ -6,36 +6,39 @@ from torch.optim import Optimizer
 from torch_geometric.data import Data
 
 
+def model_forward(model: nn.Module, data: Data) -> torch.Tensor:
+    """Ejecuta el forward segun si el modelo usa grafo o no."""
+
+    if getattr(model, "uses_graph", True):
+        return model(data.x, data.edge_index)
+    return model(data.x)
+
+
 def train_one_epoch(
     model: nn.Module,
     data: Data,
-    optimizer: Optimizer,
+    optimizer: Optimizer | None,
     loss_fn: nn.Module,
     device: torch.device | str,
 ) -> float:
     """Entrena un modelo durante una epoca y devuelve la perdida."""
 
-    # Nos aseguramos de que modelo y datos esten en el mismo dispositivo.
     model.to(device)
     data = data.to(device)
 
-    # Modo entrenamiento: activa dropout y permite calcular gradientes.
-    model.train()
+    if optimizer is None:
+        model.eval()
+        with torch.no_grad():
+            logits = model_forward(model, data)
+            loss = loss_fn(logits[data.train_mask], data.y[data.train_mask])
+        return float(loss.item())
 
-    # Limpiamos gradientes anteriores antes de calcular los nuevos.
+    model.train()
     optimizer.zero_grad()
 
-    # Forward completo sobre todos los nodos del grafo.
-    logits = model(data.x, data.edge_index)
-
-    # La perdida se calcula solo con los nodos de entrenamiento.
+    logits = model_forward(model, data)
     loss = loss_fn(logits[data.train_mask], data.y[data.train_mask])
-
-    # Backpropagation: calcula gradientes.
     loss.backward()
-
-    # Actualiza los parametros del modelo.
     optimizer.step()
 
-    # Devolvemos un float normal para guardarlo facilmente en JSON.
     return float(loss.item())

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+import pandas as pd
 from torch import nn
 
 from config import AppConfig
@@ -13,7 +14,6 @@ from config import AppConfig
 def build_initial_metrics(config: AppConfig, class_names: Iterable[str]) -> dict[str, Any]:
     """Crea el fichero de metricas inicial de la fase base."""
 
-    # Este diccionario describe el estado inicial del proyecto.
     return {
         "project": "tfg_gnn",
         "status": "initialized",
@@ -45,17 +45,58 @@ def build_initial_metrics(config: AppConfig, class_names: Iterable[str]) -> dict
 def count_trainable_parameters(model: nn.Module) -> int:
     """Cuenta los parametros entrenables de un modelo."""
 
-    # Solo se cuentan parametros que se actualizan durante entrenamiento.
     return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
+
+
+def build_metrics_dataframe(results: dict[str, dict[str, Any]]) -> pd.DataFrame:
+    """Convierte las metricas de modelos en un DataFrame de pandas."""
+
+    rows = [{"model": model_name, **metrics} for model_name, metrics in results.items()]
+    dataframe = pd.DataFrame(rows)
+
+    preferred_columns = [
+        "model",
+        "run_label",
+        "run_mode",
+        "model_type",
+        "k_neighbors",
+        "epochs",
+        "images_per_node",
+        "train_subset_size",
+        "test_subset_size",
+        "dataset_mode",
+        "train_loss",
+        "train_accuracy",
+        "test_accuracy",
+        "accuracy_gap",
+        "inference_time",
+        "num_parameters",
+        "num_nodes",
+        "num_edges",
+        "feature_dim",
+        "train_nodes",
+        "test_nodes",
+        "total_images",
+        "mean_images_per_node",
+    ]
+    existing_columns = [column for column in preferred_columns if column in dataframe.columns]
+    extra_columns = [column for column in dataframe.columns if column not in existing_columns]
+
+    return dataframe[existing_columns + extra_columns]
 
 
 def save_metrics(path: Path, metrics: dict[str, Any]) -> None:
     """Guarda metricas en formato JSON legible."""
 
-    # Creamos la carpeta de resultados si todavia no existe.
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # indent=2 hace que el JSON sea facil de leer.
     with path.open("w", encoding="utf-8") as file:
         json.dump(metrics, file, indent=2, ensure_ascii=False)
         file.write("\n")
+
+
+def save_metrics_dataframe(path: Path, dataframe: pd.DataFrame) -> None:
+    """Guarda un DataFrame de metricas en CSV."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    dataframe.to_csv(path, index=False)

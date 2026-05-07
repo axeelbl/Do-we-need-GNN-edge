@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 data/raw/
 *.tar.gz
+src/results/config_sweep/
+src/results/plots/

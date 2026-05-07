@@ -4,63 +4,76 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-# Ruta raiz del proyecto. Se calcula a partir de este archivo.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-# Carpeta para los datos descargados
 DATA_DIR = PROJECT_ROOT / "data" / "raw"
 RESULTS_DIR = PROJECT_ROOT / "src" / "results"
+PLOTS_DIR = RESULTS_DIR / "plots"
 
-# Configuracion del dataset CIFAR-10
 TRAIN_SUBSET_SIZE = 1000
 TEST_SUBSET_SIZE = 300
 NUM_CLASSES = 10
+IMAGES_PER_NODE = 5
 
-# Cada imagen CIFAR-10 tiene forma 3x32x32. Al hacer flatten queda en 3072.
+RUN_MODE = "resource_efficiency"
+
+FULL_GNN_TRAIN_SUBSET_SIZE: int | None = None
+FULL_GNN_TEST_SUBSET_SIZE: int | None = None
+
+TINY_GNN_TRAIN_SUBSET_SIZE = TRAIN_SUBSET_SIZE
+TINY_GNN_TEST_SUBSET_SIZE = TEST_SUBSET_SIZE
+
+CONTROLLED_TRAIN_SUBSET_SIZE = TRAIN_SUBSET_SIZE
+CONTROLLED_TEST_SUBSET_SIZE = TEST_SUBSET_SIZE
+
 IMAGE_FEATURE_DIM = 3 * 32 * 32
 
-# Dimensiones que usaran los modelos GNN
 INPUT_DIM = IMAGE_FEATURE_DIM
 FULL_GNN_HIDDEN_DIM = 128
 TINY_GNN_HIDDEN_DIM = 32
 DROPOUT = 0.3
 
-# Parametros para construir el grafo de similitud
 K_NEIGHBORS = 8
 NORMALIZE_FEATURES = True
 
-# Semilla fija para que los subconjuntos y resultados sean reproducibles
 RANDOM_SEED = 42
 
-# Parametros basicos de entrenamiento
-EPOCHS = 1
+EPOCHS = 3
 LEARNING_RATE = 1e-3
 DEVICE = "cpu"
+
+SWEEP_RUN_MODE = "resource_efficiency"
+SWEEP_K_NEIGHBORS = [5, 8]
+SWEEP_EPOCHS = [1, 3]
+SWEEP_IMAGES_PER_NODE = [1, 5, 10]
+SWEEP_RESULTS_DIR = RESULTS_DIR / "config_sweep"
 
 
 @dataclass(frozen=True)
 class DataConfig:
     """Configuracion del dataset para mantener imports existentes."""
 
-    # Nombre del dataset usado en el proyecto
     dataset_name: str = "CIFAR-10"
-
-    # Carpeta donde torchvision guarda/lee CIFAR-10
     raw_dir: Path = DATA_DIR
-
-    # Tamanos de los subconjuntos usados para entrenar y evaluar
     train_subset: int = TRAIN_SUBSET_SIZE
     test_subset: int = TEST_SUBSET_SIZE
+    images_per_node: int = IMAGES_PER_NODE
+    run_mode: str = RUN_MODE
+
+    full_gnn_train_subset: int | None = FULL_GNN_TRAIN_SUBSET_SIZE
+    full_gnn_test_subset: int | None = FULL_GNN_TEST_SUBSET_SIZE
+    tiny_gnn_train_subset: int = TINY_GNN_TRAIN_SUBSET_SIZE
+    tiny_gnn_test_subset: int = TINY_GNN_TEST_SUBSET_SIZE
+
+    controlled_train_subset: int = CONTROLLED_TRAIN_SUBSET_SIZE
+    controlled_test_subset: int = CONTROLLED_TEST_SUBSET_SIZE
 
 
 @dataclass(frozen=True)
 class GraphConfig:
     """Configuracion basica del grafo."""
 
-    # Numero de vecinos que se conectan por cada nodo
     k_neighbors: int = K_NEIGHBORS
-
-    # Dimension del vector de features de cada imagen
     feature_dim: int = IMAGE_FEATURE_DIM
 
 
@@ -68,52 +81,38 @@ class GraphConfig:
 class ModelConfig:
     """Configuracion comun de los modelos GNN."""
 
-    # Dimension de entrada de cada nodo
     input_dim: int = INPUT_DIM
-
-    # Numero de clases de CIFAR-10
     num_classes: int = NUM_CLASSES
-
-    # Capacidad del modelo grande
     full_hidden_dim: int = FULL_GNN_HIDDEN_DIM
-
-    # Capacidad del modelo pequeno
     tiny_hidden_dim: int = TINY_GNN_HIDDEN_DIM
-
-    # Probabilidad de apagar neuronas durante entrenamiento
     dropout: float = DROPOUT
 
 
 @dataclass(frozen=True)
 class TrainingConfig:
-    """Configuracion minima para la fase de entrenamiento posterior."""
+    """Configuracion minima del entrenamiento."""
 
-    # En esta primera comparacion solo se entrena una epoca
     epochs: int = EPOCHS
-
-    # Tasa de aprendizaje del optimizador Adam
     learning_rate: float = LEARNING_RATE
-
-    # Semilla usada por el pipeline
     seed: int = RANDOM_SEED
-
-    # Dispositivo por defecto: CPU para maxima compatibilidad
     device: str = DEVICE
+    sweep_run_mode: str = SWEEP_RUN_MODE
+    sweep_k_neighbors: list[int] = field(default_factory=lambda: SWEEP_K_NEIGHBORS)
+    sweep_epochs: list[int] = field(default_factory=lambda: SWEEP_EPOCHS)
+    sweep_images_per_node: list[int] = field(default_factory=lambda: SWEEP_IMAGES_PER_NODE)
 
 
 @dataclass(frozen=True)
 class AppConfig:
     """Configuracion agrupada para utilidades existentes."""
 
-    # Agrupa la configuracion por areas para acceder de forma ordenada
     data: DataConfig = field(default_factory=DataConfig)
     graph: GraphConfig = field(default_factory=GraphConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
-
-    # Fichero donde se guardan las metricas finales
     metrics_path: Path = RESULTS_DIR / "metrics.json"
+    plots_dir: Path = PLOTS_DIR
+    sweep_results_dir: Path = SWEEP_RESULTS_DIR
 
 
-# Objeto global de configuracion para modulos que prefieran usar dataclasses
 CONFIG = AppConfig()
