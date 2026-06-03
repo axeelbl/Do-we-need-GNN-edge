@@ -22,6 +22,7 @@ def build_initial_metrics(config: AppConfig) -> dict[str, Any]:
             "grid_size": config.grid.grid_size,
             "num_timesteps": config.grid.num_timesteps,
             "train_steps": config.grid.train_steps,
+            "val_steps": config.grid.val_steps,
             "test_steps": config.grid.test_steps,
             "alpha": config.grid.alpha,
             "dt": config.grid.dt,
@@ -30,6 +31,7 @@ def build_initial_metrics(config: AppConfig) -> dict[str, Any]:
         "training": {
             "epochs": config.training.epochs,
             "learning_rate": config.training.learning_rate,
+            "physics_lambda": config.training.physics_lambda,
             "device": config.training.device,
             "status": "pending",
         },
@@ -37,6 +39,7 @@ def build_initial_metrics(config: AppConfig) -> dict[str, Any]:
             "mlp_baseline": {"uses_graph": False},
             "full_gnn": {"uses_graph": True},
             "tiny_gnn": {"uses_graph": True},
+            "tiny_gnn_pinn": {"uses_graph": True, "physics_informed": True},
         },
         "runs": [],
     }

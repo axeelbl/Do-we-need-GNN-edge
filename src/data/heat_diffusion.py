@@ -3,13 +3,14 @@ from dataclasses import dataclass
 
 import torch
 
-from config import ALPHA, DT, DX, GRID_SIZE, NUM_TIMESTEPS, RANDOM_SEED, TRAIN_STEPS
+from config import ALPHA, DT, DX, GRID_SIZE, NUM_TIMESTEPS, RANDOM_SEED, TEST_STEPS, TRAIN_STEPS, VAL_STEPS
 
 
 @dataclass(frozen=True)
 class DiffusionData:
     states:       torch.Tensor 
     train_states: torch.Tensor   
+    val_states:   torch.Tensor
     test_states:  torch.Tensor   
     grid_size:    int
     alpha:        float
@@ -21,6 +22,8 @@ def simulate_heat_diffusion(
     grid_size:     int   = GRID_SIZE,
     num_timesteps: int   = NUM_TIMESTEPS,
     train_steps:   int   = TRAIN_STEPS,
+    val_steps:     int   = VAL_STEPS,
+    test_steps:    int   = TEST_STEPS,
     alpha:         float = ALPHA,
     dt:            float = DT,
     dx:            float = DX,
@@ -37,12 +40,22 @@ def simulate_heat_diffusion(
         states.append(grid.reshape(-1).clone())
 
     all_states  = torch.stack(states)
-    test_steps  = num_timesteps - train_steps
+    min_required = train_steps + val_steps + test_steps
+    if min_required > num_timesteps:
+        raise ValueError(
+            "train_steps + val_steps + test_steps must be <= num_timesteps "
+            f"({min_required} > {num_timesteps})"
+        )
+
+    train_end = train_steps
+    val_end = train_end + val_steps
+    test_end = val_end + test_steps
 
     return DiffusionData(
         states       = all_states,
         train_states = all_states[:train_steps],
-        test_states  = all_states[train_steps:train_steps + test_steps],
+        val_states   = all_states[train_end:val_end],
+        test_states  = all_states[val_end:test_end],
         grid_size    = grid_size,
         alpha        = alpha,
         dt           = dt,
@@ -64,6 +77,26 @@ def add_gaussian_noise(
     generator = torch.Generator().manual_seed(seed)
     noise = torch.randn(states.shape, generator=generator) * sigma
     return (states + noise).clamp(min=0.0)
+
+
+def select_data_fraction(
+    x_input: torch.Tensor,
+    x_target: torch.Tensor,
+    fraction: float,
+    seed: int = RANDOM_SEED,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Selects a deterministic subset of temporal training pairs."""
+    if not 0.0 < fraction <= 1.0:
+        raise ValueError(f"data_fraction must be in (0, 1], got {fraction}")
+
+    num_pairs = x_input.shape[0]
+    keep = max(1, int(round(num_pairs * fraction)))
+    if keep >= num_pairs:
+        return x_input, x_target
+
+    generator = torch.Generator().manual_seed(seed)
+    indices = torch.randperm(num_pairs, generator=generator)[:keep].sort().values
+    return x_input[indices], x_target[indices]
 
 def _gaussian_initial_condition(
     grid_size: int,

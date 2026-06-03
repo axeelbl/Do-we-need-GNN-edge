@@ -9,8 +9,9 @@ PLOTS_DIR   = RESULTS_DIR / "plots"
 
 GRID_SIZE      = 32    
 NUM_TIMESTEPS  = 200   
-TRAIN_STEPS    = 150   
-TEST_STEPS     = 50    
+TRAIN_STEPS    = 120
+VAL_STEPS      = 30
+TEST_STEPS     = 50
 ALPHA          = 0.1   
 DT             = 1.0   
 DX             = 1.0   
@@ -22,6 +23,7 @@ HIDDEN_DIM_TINY = 16
 
 EPOCHS         = 300
 LEARNING_RATE  = 1e-3
+PHYSICS_LAMBDA = 0.1
 RANDOM_SEED    = 42
 DEVICE         = "cpu"
 
@@ -36,6 +38,7 @@ class GridConfig:
     grid_size:     int   = GRID_SIZE
     num_timesteps: int   = NUM_TIMESTEPS
     train_steps:   int   = TRAIN_STEPS
+    val_steps:     int   = VAL_STEPS
     test_steps:    int   = TEST_STEPS
     alpha:         float = ALPHA
     dt:            float = DT
@@ -54,6 +57,7 @@ class ModelConfig:
 class TrainingConfig:
     epochs:        int   = EPOCHS
     learning_rate: float = LEARNING_RATE
+    physics_lambda: float = PHYSICS_LAMBDA
     seed:          int   = RANDOM_SEED
     device:        str   = DEVICE
 

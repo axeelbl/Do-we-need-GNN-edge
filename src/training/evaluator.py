@@ -1,10 +1,11 @@
 import time
+from io import BytesIO
 
 import torch
 from torch import nn
 
-from config import ALPHA, DT, DX
-from training.trainer import model_forward
+from config import ALPHA, DT, DX, GRID_SIZE
+from training.trainer import diffusion_physics_target, model_forward
 
 
 def evaluate_prediction_error(
@@ -33,10 +34,10 @@ def evaluate_physics_violation(
     alpha:      float = ALPHA,
     dt:         float = DT,
     dx:         float = DX,
+    grid_size:  int   = GRID_SIZE,
 ) -> float:
 
     model.eval()
-    r          = alpha * dt / (dx ** 2)
     total_phys = 0.0
     num_steps  = x_input.shape[0]
 
@@ -44,13 +45,14 @@ def evaluate_physics_violation(
         for t in range(num_steps):
             x_t   = x_input[t]                          # (N, 1)
             x_pred = model_forward(model, x_t, edge_index)
-
-            src, tgt = edge_index[0], edge_index[1]
-            diff = x_t[src] - x_t[tgt]
-            laplacian = torch.zeros_like(x_t)
-            laplacian.scatter_add_(0, tgt.unsqueeze(1).expand_as(diff), diff)
-
-            x_physics   = x_t - r * laplacian
+            x_physics = diffusion_physics_target(
+                x_t,
+                edge_index,
+                grid_size=grid_size,
+                alpha=alpha,
+                dt=dt,
+                dx=dx,
+            )
             residual    = x_pred - x_physics
             total_phys += float((residual ** 2).mean().item())
 
@@ -69,3 +71,9 @@ def measure_inference_time(
         _     = model_forward(model, x_input[0], edge_index)
         end   = time.perf_counter()
     return end - start
+
+
+def measure_model_size_bytes(model: nn.Module) -> int:
+    buffer = BytesIO()
+    torch.save(model.state_dict(), buffer)
+    return buffer.tell()
