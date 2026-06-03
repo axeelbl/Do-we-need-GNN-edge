@@ -1,31 +1,36 @@
-"""Modelo Tiny-GNN para clasificacion de nodos."""
-
 import torch
 from torch import nn
-import torch.nn.functional as functional
 from torch_geometric.nn import GCNConv
 
-from config import INPUT_DIM, NUM_CLASSES, TINY_GNN_HIDDEN_DIM
+from config import HIDDEN_DIM_TINY
 
 
 class TinyGNN(nn.Module):
-    """GCN reducida de dos capas para comparar coste y rendimiento."""
-
     uses_graph = True
 
     def __init__(
         self,
-        input_dim: int = INPUT_DIM,
-        hidden_dim: int = TINY_GNN_HIDDEN_DIM,
-        num_classes: int = NUM_CLASSES,
+        input_dim:  int = 1,
+        hidden_dim: int = HIDDEN_DIM_TINY,
+        output_dim: int = 1,
     ) -> None:
         super().__init__()
-        self.conv1 = GCNConv(input_dim, hidden_dim)
-        self.conv2 = GCNConv(hidden_dim, num_classes)
 
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
-        """Devuelve logits por nodo."""
+        self.conv1 = GCNConv(input_dim,  hidden_dim)
+        self.conv2 = GCNConv(hidden_dim, output_dim)
+        self.relu  = nn.ReLU()
 
-        x = self.conv1(x, edge_index)
-        x = functional.relu(x)
+    def forward(
+        self,
+        x:          torch.Tensor,
+        edge_index: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Args:
+            x:          (N, 1) temperatura actual de cada node.
+            edge_index: (2, E) arestes del graf de veïnatge.
+        Returns:
+            (N, 1) temperatura predicha.
+        """
+        x = self.relu(self.conv1(x, edge_index))
         return self.conv2(x, edge_index)

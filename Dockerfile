@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-CMD ["python", "scripts/run_config_sweep.py"]
+CMD ["python", "src/main.py"]

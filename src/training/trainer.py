@@ -1,44 +1,43 @@
-"""Rutinas minimas de entrenamiento."""
-
 import torch
 from torch import nn
 from torch.optim import Optimizer
-from torch_geometric.data import Data
 
 
-def model_forward(model: nn.Module, data: Data) -> torch.Tensor:
-    """Ejecuta el forward segun si el modelo usa grafo o no."""
-
+def model_forward(
+    model:      nn.Module,
+    x:          torch.Tensor,
+    edge_index: torch.Tensor,
+) -> torch.Tensor:
     if getattr(model, "uses_graph", True):
-        return model(data.x, data.edge_index)
-    return model(data.x)
+        return model(x, edge_index)
+    return model(x)
 
 
 def train_one_epoch(
-    model: nn.Module,
-    data: Data,
-    optimizer: Optimizer | None,
-    loss_fn: nn.Module,
-    device: torch.device | str,
-) -> float:
-    """Entrena un modelo durante una epoca y devuelve la perdida."""
+    model:      nn.Module,
+    x_input:    torch.Tensor,
+    x_target:   torch.Tensor,
+    edge_index: torch.Tensor,
+    optimizer:  Optimizer,
+    loss_fn:    nn.Module,
+) -> dict[str, float]:
 
-    model.to(device)
-    data = data.to(device)
-
-    if optimizer is None:
-        model.eval()
-        with torch.no_grad():
-            logits = model_forward(model, data)
-            loss = loss_fn(logits[data.train_mask], data.y[data.train_mask])
-        return float(loss.item())
 
     model.train()
     optimizer.zero_grad()
 
-    logits = model_forward(model, data)
-    loss = loss_fn(logits[data.train_mask], data.y[data.train_mask])
-    loss.backward()
+    num_steps       = x_input.shape[0]
+    total_data_loss = torch.tensor(0.0, device=x_input.device)
+
+    for t in range(num_steps):
+        x_pred      = model_forward(model, x_input[t], edge_index)
+        total_data_loss = total_data_loss + loss_fn(x_pred, x_target[t])
+
+    mean_data_loss = total_data_loss / num_steps
+    mean_data_loss.backward()
     optimizer.step()
 
-    return float(loss.item())
+    return {
+        "data_loss":  float(mean_data_loss.item()),
+        "total_loss": float(mean_data_loss.item()),
+    }
