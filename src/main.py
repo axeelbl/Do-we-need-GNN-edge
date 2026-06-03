@@ -92,12 +92,26 @@ def run(
 
     print("[3/4] Entrenant models...")
 
-    models: dict[str, nn.Module] = {
-        "mlp_baseline": MLPBaseline(hidden_dim=config.model.hidden_dim_full),
-        "full_gnn":     FullGNN(hidden_dim=config.model.hidden_dim_full),
-        "tiny_gnn":     TinyGNN(hidden_dim=config.model.hidden_dim_tiny),
-        "tiny_gnn_pinn": TinyGNN(hidden_dim=config.model.hidden_dim_tiny),
+    # Use deterministic, architecture-level seeds so comparisons are not driven
+    # by unlucky random initialisation. TinyGNN and TinyGNN+PINN intentionally
+    # share the same seed because they have the same architecture; the only
+    # intended difference is the physics-informed loss term.
+    model_seed_offsets = {
+        "mlp_baseline": 101,
+        "full_gnn": 202,
+        "tiny_gnn": 303,
+        "tiny_gnn_pinn": 303,
     }
+    model_builders: dict[str, Any] = {
+        "mlp_baseline": lambda: MLPBaseline(hidden_dim=config.model.hidden_dim_full),
+        "full_gnn": lambda: FullGNN(hidden_dim=config.model.hidden_dim_full),
+        "tiny_gnn": lambda: TinyGNN(hidden_dim=config.model.hidden_dim_tiny),
+        "tiny_gnn_pinn": lambda: TinyGNN(hidden_dim=config.model.hidden_dim_tiny),
+    }
+    models: dict[str, nn.Module] = {}
+    for model_name, build_model in model_builders.items():
+        torch.manual_seed(config.training.seed + model_seed_offsets[model_name])
+        models[model_name] = build_model()
 
     loss_fn = nn.MSELoss()
     loss_histories: dict[str, list[dict]] = {name: [] for name in models}
