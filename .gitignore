@@ -8,3 +8,11 @@ __MACOSX/
 *.log
 src/results/
 !src/results/.gitkeep
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+.vscode/settings.json

@@ -1,5 +1,17 @@
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
+
+def _default_device() -> str:
+    forced_device = os.getenv("TFG_DEVICE")
+    if forced_device:
+        return forced_device
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
+
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -9,8 +21,9 @@ PLOTS_DIR   = RESULTS_DIR / "plots"
 
 GRID_SIZE      = 32    
 NUM_TIMESTEPS  = 200   
-TRAIN_STEPS    = 150   
-TEST_STEPS     = 50    
+TRAIN_STEPS    = 120
+VAL_STEPS      = 30
+TEST_STEPS     = 50
 ALPHA          = 0.1   
 DT             = 1.0   
 DX             = 1.0   
@@ -22,8 +35,9 @@ HIDDEN_DIM_TINY = 16
 
 EPOCHS         = 300
 LEARNING_RATE  = 1e-3
+PHYSICS_LAMBDA = 0.1
 RANDOM_SEED    = 42
-DEVICE         = "cpu"
+DEVICE         = _default_device()
 
 SWEEP_HIDDEN_DIMS = [32, 16, 8, 4]
 SWEEP_DATA_FRACTIONS = [1.0, 0.5, 0.2, 0.1, 0.05, 0.01]
@@ -36,6 +50,7 @@ class GridConfig:
     grid_size:     int   = GRID_SIZE
     num_timesteps: int   = NUM_TIMESTEPS
     train_steps:   int   = TRAIN_STEPS
+    val_steps:     int   = VAL_STEPS
     test_steps:    int   = TEST_STEPS
     alpha:         float = ALPHA
     dt:            float = DT
@@ -54,6 +69,7 @@ class ModelConfig:
 class TrainingConfig:
     epochs:        int   = EPOCHS
     learning_rate: float = LEARNING_RATE
+    physics_lambda: float = PHYSICS_LAMBDA
     seed:          int   = RANDOM_SEED
     device:        str   = DEVICE
 

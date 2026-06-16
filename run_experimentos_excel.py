@@ -28,7 +28,13 @@ def build_config(exp: dict) -> AppConfig:
     return replace(
         CONFIG,
         model=ModelConfig(hidden_dim_full=exp["hidden_dim_full"], hidden_dim_tiny=exp["hidden_dim_tiny"], input_dim=1, output_dim=1),
-        training=TrainingConfig(epochs=exp["epochs"], learning_rate=CONFIG.training.learning_rate, seed=CONFIG.training.seed, device=CONFIG.training.device),
+        training=TrainingConfig(
+            epochs=exp["epochs"],
+            learning_rate=CONFIG.training.learning_rate,
+            physics_lambda=CONFIG.training.physics_lambda,
+            seed=CONFIG.training.seed,
+            device=CONFIG.training.device,
+        ),
         results_dir=BASE_RESULTS / exp["id"],
         plots_dir=BASE_RESULTS / exp["id"] / "plots",
     )
@@ -48,9 +54,9 @@ def main() -> None:
 
         config_rows.append({
             "experiment_id": exp["id"], "descripcion": exp["descripcion"], "grid_size": cfg.grid.grid_size,
-            "num_timesteps": cfg.grid.num_timesteps, "train_steps": cfg.grid.train_steps, "test_steps": cfg.grid.test_steps,
+            "num_timesteps": cfg.grid.num_timesteps, "train_steps": cfg.grid.train_steps, "val_steps": cfg.grid.val_steps, "test_steps": cfg.grid.test_steps,
             "alpha": cfg.grid.alpha, "dt": cfg.grid.dt, "dx": cfg.grid.dx, "epochs": cfg.training.epochs,
-            "learning_rate": cfg.training.learning_rate, "device": cfg.training.device,
+            "learning_rate": cfg.training.learning_rate, "physics_lambda": cfg.training.physics_lambda, "device": cfg.training.device,
             "hidden_dim_full": cfg.model.hidden_dim_full, "hidden_dim_tiny": cfg.model.hidden_dim_tiny,
             "data_fraction": exp["data_fraction"], "noise_level": exp["noise_level"],
             "runtime_seconds_total_experiment": round(elapsed, 3),
@@ -61,18 +67,21 @@ def main() -> None:
                 "experiment_id": exp["id"], "model": model_name, "descripcion": exp["descripcion"],
                 "epochs": cfg.training.epochs, "hidden_dim_full": cfg.model.hidden_dim_full, "hidden_dim_tiny": cfg.model.hidden_dim_tiny,
                 "grid_size": cfg.grid.grid_size, "num_parameters": metrics.get("num_parameters"),
+                "model_size_bytes": metrics.get("model_size_bytes"), "val_mse": metrics.get("val_mse"),
                 "test_mse": metrics.get("test_mse"), "test_physics_violation": metrics.get("test_physics_violation"),
                 "inference_time_seconds": metrics.get("inference_time"), "data_fraction": metrics.get("data_fraction"),
-                "noise_level": metrics.get("noise_level"), "runtime_seconds_total_experiment": round(elapsed, 3),
+                "noise_level": metrics.get("noise_level"), "physics_lambda": metrics.get("physics_lambda"),
+                "train_pairs": metrics.get("train_pairs"), "val_pairs": metrics.get("val_pairs"), "test_pairs": metrics.get("test_pairs"),
+                "runtime_seconds_total_experiment": round(elapsed, 3),
             })
 
     results_df = pd.DataFrame(result_rows)
     config_df = pd.DataFrame(config_rows)
     explanation_df = pd.DataFrame([
-        {"apartado": "Objetivo", "texto": "Comparar MLP baseline, FullGNN y TinyGNN en difusión de calor con tres tamaños de modelo."},
+        {"apartado": "Objetivo", "texto": "Comparar MLP baseline, FullGNN, TinyGNN y TinyGNN+PINN en difusión de calor con tres tamaños de modelo."},
         {"apartado": "Cómo leerlo", "texto": "Menor test_mse indica mejor predicción. Menor test_physics_violation indica mayor coherencia física. Menos parámetros indica modelo más ligero."},
         {"apartado": "Conclusión inicial", "texto": "En una simulación limpia, todos aprenden bien; lo interesante es comparar precisión frente a parámetros y tiempo."},
-        {"apartado": "Aviso", "texto": "data_fraction y noise_level se registran, pero el código actual todavía no los aplica realmente a los datos."},
+        {"apartado": "Aviso", "texto": "data_fraction reduce realmente los pares temporales de entrenamiento, noise_level añade ruido gaussiano solo al entrenamiento y TinyGNN+PINN usa Loss_data + lambda*Loss_physics."},
     ])
 
     with pd.ExcelWriter(REPORT_PATH, engine="openpyxl") as writer:

@@ -8,7 +8,7 @@ from torch import nn
 
 from config import AppConfig, CONFIG
 from data.graph_builder import build_grid_graph
-from data.heat_diffusion import build_temporal_pairs, simulate_heat_diffusion
+from data.heat_diffusion import add_gaussian_noise, build_temporal_pairs, select_data_fraction, simulate_heat_diffusion
 from models.baselines import MLPBaseline
 from models.full_gnn import FullGNN
 from models.tiny_gnn import TinyGNN
@@ -16,6 +16,7 @@ from training.evaluator import (
     evaluate_physics_violation,
     evaluate_prediction_error,
     measure_inference_time,
+    measure_model_size_bytes,
 )
 from training.trainer import train_one_epoch
 from utils.metrics import (
@@ -55,6 +56,8 @@ def run(
         grid_size=config.grid.grid_size,
         num_timesteps=config.grid.num_timesteps,
         train_steps=config.grid.train_steps,
+        val_steps=config.grid.val_steps,
+        test_steps=config.grid.test_steps,
         alpha=config.grid.alpha,
         dt=config.grid.dt,
         dx=config.grid.dx,
@@ -62,10 +65,24 @@ def run(
     )
 
     x_train_in, x_train_tgt = build_temporal_pairs(sim.train_states)
+    x_val_in, x_val_tgt = build_temporal_pairs(sim.val_states)
     x_test_in, x_test_tgt = build_temporal_pairs(sim.test_states)
+
+    x_train_in, x_train_tgt = select_data_fraction(
+        x_train_in,
+        x_train_tgt,
+        fraction=data_fraction,
+        seed=config.training.seed,
+    )
+
+    if noise_level > 0.0:
+        x_train_in = add_gaussian_noise(x_train_in, sigma=noise_level, seed=config.training.seed + 17)
+        x_train_tgt = add_gaussian_noise(x_train_tgt, sigma=noise_level, seed=config.training.seed + 31)
 
     x_train_in  = x_train_in.unsqueeze(-1).to(device)
     x_train_tgt = x_train_tgt.unsqueeze(-1).to(device)
+    x_val_in    = x_val_in.unsqueeze(-1).to(device)
+    x_val_tgt   = x_val_tgt.unsqueeze(-1).to(device)
     x_test_in   = x_test_in.unsqueeze(-1).to(device)
     x_test_tgt  = x_test_tgt.unsqueeze(-1).to(device)
 
@@ -75,11 +92,26 @@ def run(
 
     print("[3/4] Entrenant models...")
 
-    models: dict[str, nn.Module] = {
-        "mlp_baseline": MLPBaseline(hidden_dim=config.model.hidden_dim_full),
-        "full_gnn":     FullGNN(hidden_dim=config.model.hidden_dim_full),
-        "tiny_gnn":     TinyGNN(hidden_dim=config.model.hidden_dim_tiny),
+    # Use deterministic, architecture-level seeds so comparisons are not driven
+    # by unlucky random initialisation. TinyGNN and TinyGNN+PINN intentionally
+    # share the same seed because they have the same architecture; the only
+    # intended difference is the physics-informed loss term.
+    model_seed_offsets = {
+        "mlp_baseline": 101,
+        "full_gnn": 202,
+        "tiny_gnn": 303,
+        "tiny_gnn_pinn": 303,
     }
+    model_builders: dict[str, Any] = {
+        "mlp_baseline": lambda: MLPBaseline(hidden_dim=config.model.hidden_dim_full),
+        "full_gnn": lambda: FullGNN(hidden_dim=config.model.hidden_dim_full),
+        "tiny_gnn": lambda: TinyGNN(hidden_dim=config.model.hidden_dim_tiny),
+        "tiny_gnn_pinn": lambda: TinyGNN(hidden_dim=config.model.hidden_dim_tiny),
+    }
+    models: dict[str, nn.Module] = {}
+    for model_name, build_model in model_builders.items():
+        torch.manual_seed(config.training.seed + model_seed_offsets[model_name])
+        models[model_name] = build_model()
 
     loss_fn = nn.MSELoss()
     loss_histories: dict[str, list[dict]] = {name: [] for name in models}
@@ -93,6 +125,7 @@ def run(
         print(f"  Entrenant {model_name:15s} ({count_trainable_parameters(model):6d} params)...")
 
         for epoch in range(1, config.training.epochs + 1):
+            physics_lambda = config.training.physics_lambda if model_name == "tiny_gnn_pinn" else 0.0
             losses = train_one_epoch(
                 model=model,
                 x_input=x_train_in,
@@ -100,13 +133,19 @@ def run(
                 edge_index=edge_index,
                 optimizer=optimizer,
                 loss_fn=loss_fn,
+                physics_lambda=physics_lambda,
+                grid_size=config.grid.grid_size,
+                alpha=config.grid.alpha,
+                dt=config.grid.dt,
+                dx=config.grid.dx,
             )
             loss_histories[model_name].append(losses)
 
             if epoch % max(1, config.training.epochs // 5) == 0 or epoch == 1:
                 print(
                     f"    Epoca {epoch:>4d}/{config.training.epochs} | "
-                    f"loss={losses['total_loss']:.5f}"
+                    f"loss={losses['total_loss']:.5f} "
+                    f"(data={losses['data_loss']:.5f}, phys={losses['physics_loss']:.5f})"
                 )
 
     print("[4/4] Avaluant models...")
@@ -117,21 +156,37 @@ def run(
     for model_name, model in models.items():
         model.eval()
 
+        val_mse = evaluate_prediction_error(model, x_val_in, x_val_tgt, edge_index)
         test_mse = evaluate_prediction_error(model, x_test_in, x_test_tgt, edge_index)
-        phys_viol = evaluate_physics_violation(model, x_test_in, edge_index)
+        phys_viol = evaluate_physics_violation(
+            model,
+            x_test_in,
+            edge_index,
+            alpha=config.grid.alpha,
+            dt=config.grid.dt,
+            dx=config.grid.dx,
+            grid_size=config.grid.grid_size,
+        )
         infer_time = measure_inference_time(model, x_test_in, edge_index)
         num_params = count_trainable_parameters(model)
+        model_size = measure_model_size_bytes(model)
 
         train_loss = loss_histories[model_name][-1]["total_loss"]
 
         results[model_name] = {
             "num_parameters": num_params,
+            "model_size_bytes": model_size,
             "train_loss": train_loss,
+            "val_mse": val_mse,
             "test_mse": test_mse,
             "test_physics_violation": phys_viol,
             "inference_time": infer_time,
             "data_fraction": data_fraction,
             "noise_level": noise_level,
+            "physics_lambda": config.training.physics_lambda if model_name == "tiny_gnn_pinn" else 0.0,
+            "train_pairs": int(x_train_in.shape[0]),
+            "val_pairs": int(x_val_in.shape[0]),
+            "test_pairs": int(x_test_in.shape[0]),
         }
 
         with torch.no_grad():
@@ -146,7 +201,7 @@ def run(
 
         print(
             f"  {model_name:15s} | params={num_params:6d} | "
-            f"test_mse={test_mse:.5f} | phys_viol={phys_viol:.5f} | "
+            f"val_mse={val_mse:.5f} | test_mse={test_mse:.5f} | phys_viol={phys_viol:.5f} | "
             f"time={infer_time:.4f}s"
         )
 
