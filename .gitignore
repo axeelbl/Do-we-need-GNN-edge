@@ -16,3 +16,9 @@ src/results/
 id_rsa*
 id_ed25519*
 .vscode/settings.json
+
+# Local safety backups generated during result/report cleanup
+legacy/backups/openclaw_cleanup_*/
+
+legacy/results/
+legacy/backups/

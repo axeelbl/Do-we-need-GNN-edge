@@ -12,7 +12,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from config import CONFIG, GridConfig, ModelConfig, TrainingConfig
-from main import run
+from legacy.main import run
 
 RESULTS_DIR = SRC_DIR / "results" / "data_fraction_gpu"
 SUMMARY_CSV = RESULTS_DIR / "data_fraction_gpu_runs.csv"

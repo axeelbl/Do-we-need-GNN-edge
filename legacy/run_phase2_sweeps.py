@@ -17,7 +17,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from config import CONFIG, GridConfig, ModelConfig, TrainingConfig
-from main import run
+from legacy.main import run
 
 RESULTS_DIR = SRC_DIR / "results" / "phase2_sweeps"
 SUMMARY_CSV = RESULTS_DIR / "phase2_all_runs.csv"

@@ -15,7 +15,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from config import CONFIG, SWEEP_HIDDEN_DIMS, SWEEP_RESULTS_DIR
-from main import run
+from legacy.main import run
 from utils.metrics import save_metrics, save_metrics_dataframe
 
 

@@ -12,7 +12,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 from config import CONFIG, AppConfig, ModelConfig, TrainingConfig
-from main import run
+from legacy.main import run
 
 REPORT_PATH = PROJECT_ROOT / "informe_ejecuciones_tfg.xlsx"
 BASE_RESULTS = SRC_DIR / "results" / "experimentos_excel"
