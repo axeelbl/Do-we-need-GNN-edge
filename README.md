@@ -1,17 +1,19 @@
 # TFG edge cooling: resultados finales
 
-Este repositorio contiene los experimentos corregidos para comparar MLP, Full-GNN, Tiny-GNN y Tiny-GNN + PINN en predicción térmica sobre una cuadrícula/grafo.
+Este repositorio contiene el código y los resultados finales usados para la memoria del TFG, comparando MLP, Full-GNN, Tiny-GNN y Tiny-GNN + PINN en predicción térmica sobre una cuadrícula/grafo.
 
-## Estructura actual
+## Estructura de entrega
 
 - `src/`: código activo de simulación, modelos, entrenamiento y sweep corregido.
 - `CONCLUSIONES/`: resultados finales limpios para la memoria/entrega.
-  - `Results.csv`: CSV final limpio, solo modo `recommended` (`2970` filas).
-  - `Report.xlsx`: Excel final regenerado desde `Results.csv`, sin filas `smoke`.
+  - `Results.csv`: CSV definitivo usado para la memoria (`2970` filas), con columnas de hardware/GPU y metadatos de ejecución.
+  - `Report.xlsx`: Excel final regenerado desde los resultados definitivos, sin filas `smoke`.
   - `Informe_analisis_experimentos.docx`: informe final coherente con `Results.csv` y `Report.xlsx`.
   - `figuras/`: figuras usadas por el informe.
   - `tablas/`: tablas derivadas del CSV final.
-- `legacy/`: ejecuciones, informes y scripts antiguos conservados como referencia histórica.
+- `requirements.txt`: dependencias mínimas para ejecutar el código.
+
+Las carpetas y resultados antiguos no se incluyen en la entrega final para evitar confusiones con versiones previas del análisis.
 
 ## Experimento principal
 
