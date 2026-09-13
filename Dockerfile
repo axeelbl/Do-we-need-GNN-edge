@@ -6,14 +6,15 @@ ENV PYTHONPATH=/app/src
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch>=2.2,<3" \
     && pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+RUN useradd --create-home --uid 10001 appuser
 
-CMD ["python", "src/main.py"]
+COPY --chown=appuser:appuser . .
+
+USER appuser
+
+CMD ["python", "src/run_sweep_experiments_v2.py", "--mode", "smoke"]

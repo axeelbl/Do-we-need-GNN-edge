@@ -28,7 +28,6 @@ import argparse
 import copy
 import itertools
 import math
-import os
 import sys
 import time
 from dataclasses import dataclass
@@ -867,6 +866,55 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def validate_experiment_config(
+    args: argparse.Namespace,
+    checkpoints: list[int],
+    seeds: list[int],
+    hidden_dims: list[int],
+    data_fractions: list[float],
+    noise_levels: list[float],
+    physics_lambdas: list[float],
+) -> None:
+    """Reject invalid sweep parameters before creating output files or training."""
+    errors: list[str] = []
+
+    if not checkpoints or any(value < 1 for value in checkpoints):
+        errors.append("epochs/checkpoints must contain positive integers")
+    if not seeds:
+        errors.append("seeds must not be empty")
+    if not hidden_dims or any(value < 1 for value in hidden_dims):
+        errors.append("hidden dimensions must contain positive integers")
+    if not data_fractions or any(not 0.0 < value <= 1.0 for value in data_fractions):
+        errors.append("data fractions must be in (0, 1]")
+    if not noise_levels or any(value < 0.0 for value in noise_levels):
+        errors.append("noise levels must be non-negative")
+    if not physics_lambdas or any(value < 0.0 for value in physics_lambdas):
+        errors.append("physics lambdas must be non-negative")
+    if args.grid_size < 2:
+        errors.append("grid size must be at least 2")
+    if args.trajectory_timesteps < 2:
+        errors.append("trajectory timesteps must be at least 2")
+    if min(args.train_trajectories, args.val_trajectories, args.test_trajectories) < 1:
+        errors.append("all trajectory counts must be positive")
+    if args.learning_rate <= 0.0:
+        errors.append("learning rate must be positive")
+    if not 0.0 <= args.dropout < 1.0:
+        errors.append("dropout must be in [0, 1)")
+    if min(args.data_alpha, args.pinn_alpha, args.dt, args.dx) <= 0.0:
+        errors.append("alpha, dt and dx values must be positive")
+    if args.min_epochs < 1 or args.patience < 1:
+        errors.append("min epochs and patience must be positive")
+    if args.min_delta < 0.0:
+        errors.append("min delta must be non-negative")
+    if args.inference_repeats < 1 or args.inference_warmup < 0:
+        errors.append("inference repeats must be positive and warmup non-negative")
+    if args.limit_trainings < 0:
+        errors.append("limit trainings must be non-negative")
+
+    if errors:
+        raise ValueError("Invalid experiment configuration: " + "; ".join(errors))
+
+
 def main() -> None:
     args = parse_args()
     started_at = time.perf_counter()
@@ -893,6 +941,16 @@ def main() -> None:
         data_fractions = parse_float_list(args.data_fractions)
         noise_levels = parse_float_list(args.noise_levels)
         physics_lambdas = parse_float_list(args.physics_lambdas)
+
+    validate_experiment_config(
+        args,
+        checkpoints,
+        seeds,
+        hidden_dims,
+        data_fractions,
+        noise_levels,
+        physics_lambdas,
+    )
 
     only_models = [x.strip().upper() for x in args.only_models.split(",") if x.strip()]
     device = resolve_device(args.device)
