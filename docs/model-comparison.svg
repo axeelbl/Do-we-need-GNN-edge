@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
+  <title id="title">Experimental architecture comparison for thermal prediction</title>
+  <desc id="desc">A heat state on a 32 by 32 grid is converted into one-step prediction pairs from independent train, validation, and test trajectories. Four approaches are compared: a node-wise MLP without graph edges, a three-layer Full-GNN, a two-layer Tiny-GNN, and Tiny-GNN plus a diffusion physics loss used only during training. Validation MSE selects checkpoints and the PINN lambda.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" x2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#173b63"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .title { font: 700 30px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #ffffff; }
+      .subtitle { font: 400 16px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #dbeafe; }
+      .section { font: 700 13px system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: 1.4px; fill: #475569; }
+      .card-title { font: 700 20px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; }
+      .card-subtitle { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #475569; }
+      .body { font: 400 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #334155; }
+      .body-strong { font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #0f172a; }
+      .small { font: 400 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #475569; }
+      .mono { font: 600 13px ui-monospace, SFMono-Regular, Consolas, monospace; fill: #0f172a; }
+      .arrow { stroke: #475569; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="820" rx="24" fill="#f8fafc"/>
+  <path d="M24 0H1176Q1200 0 1200 24V130H0V24Q0 0 24 0Z" fill="url(#header)"/>
+  <text x="60" y="55" class="title">Do we need GNN at the edge?</text>
+  <text x="60" y="88" class="subtitle">One-step thermal prediction · four controlled model variants · validation-based selection</text>
+
+  <text x="60" y="166" class="section">SHARED EXPERIMENT PIPELINE</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="185" width="270" height="112" rx="14" fill="#ffffff" stroke="#cbd5e1"/>
+    <rect x="465" y="185" width="270" height="112" rx="14" fill="#ffffff" stroke="#cbd5e1"/>
+    <rect x="870" y="185" width="270" height="112" rx="14" fill="#ffffff" stroke="#cbd5e1"/>
+  </g>
+
+  <g aria-label="32 by 32 thermal grid illustration">
+    <rect x="82" y="208" width="68" height="68" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
+    <path d="M99 208V276M116 208V276M133 208V276M82 225H150M82 242H150M82 259H150" stroke="#7dd3fc"/>
+    <circle cx="116" cy="242" r="15" fill="#f97316" opacity="0.78"/>
+    <circle cx="116" cy="242" r="7" fill="#dc2626" opacity="0.85"/>
+  </g>
+  <text x="170" y="224" class="card-title">Thermal state</text>
+  <text x="170" y="247" class="body">32 × 32 grid graph</text>
+  <text x="170" y="269" class="mono">x(t): 1,024 node values</text>
+
+  <text x="490" y="220" class="card-title">Trajectory split</text>
+  <text x="490" y="246" class="body">Independent train / validation / test</text>
+  <text x="490" y="268" class="body">One-step pairs: x(t) → x(t + 1)</text>
+
+  <text x="895" y="216" class="card-title">Model selection</text>
+  <text x="895" y="240" class="body">Lowest validation MSE</text>
+  <text x="895" y="263" class="body">Checkpoint + PINN λ selected</text>
+  <text x="895" y="284" class="body">before test evaluation</text>
+
+  <path d="M340 241H450" class="arrow"/>
+  <path d="M745 241H855" class="arrow"/>
+
+  <text x="60" y="340" class="section">MODEL COMPARISON</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="360" width="255" height="258" rx="16" fill="#ffffff" stroke="#94a3b8"/>
+    <rect x="335" y="360" width="255" height="258" rx="16" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+    <rect x="610" y="360" width="255" height="258" rx="16" fill="#ffffff" stroke="#0f766e" stroke-width="2"/>
+    <rect x="885" y="360" width="255" height="258" rx="16" fill="#ffffff" stroke="#7c3aed" stroke-width="2"/>
+  </g>
+
+  <rect x="60" y="360" width="255" height="8" rx="4" fill="#64748b"/>
+  <text x="84" y="404" class="card-title">MLP</text>
+  <text x="84" y="428" class="card-subtitle">NODE-WISE BASELINE</text>
+  <text x="84" y="463" class="mono">Linear 1 → h</text>
+  <text x="84" y="487" class="mono">ReLU · Linear h → h</text>
+  <text x="84" y="511" class="mono">ReLU · Linear h → 1</text>
+  <line x1="84" y1="533" x2="291" y2="533" stroke="#e2e8f0"/>
+  <text x="84" y="558" class="body-strong">No graph edges</text>
+  <text x="84" y="581" class="body">Each node is processed</text>
+  <text x="84" y="602" class="body">independently.</text>
+
+  <rect x="335" y="360" width="255" height="8" rx="4" fill="#2563eb"/>
+  <text x="359" y="404" class="card-title">Full-GNN</text>
+  <text x="359" y="428" class="card-subtitle">3 GRAPH CONVOLUTIONS</text>
+  <text x="359" y="463" class="mono">GCNConv 1 → h</text>
+  <text x="359" y="487" class="mono">GCNConv h → h</text>
+  <text x="359" y="511" class="mono">GCNConv h → 1</text>
+  <line x1="359" y1="533" x2="566" y2="533" stroke="#dbeafe"/>
+  <text x="359" y="558" class="body-strong">ReLU + dropout 0.1</text>
+  <text x="359" y="581" class="body">Message passing at</text>
+  <text x="359" y="602" class="body">every layer.</text>
+
+  <rect x="610" y="360" width="255" height="8" rx="4" fill="#0f766e"/>
+  <text x="634" y="404" class="card-title">Tiny-GNN</text>
+  <text x="634" y="428" class="card-subtitle">2 GRAPH CONVOLUTIONS</text>
+  <text x="634" y="463" class="mono">GCNConv 1 → h</text>
+  <text x="634" y="487" class="mono">ReLU</text>
+  <text x="634" y="511" class="mono">GCNConv h → 1</text>
+  <line x1="634" y1="533" x2="841" y2="533" stroke="#ccfbf1"/>
+  <text x="634" y="560" class="body-strong">Compact forward path</text>
+  <text x="634" y="584" class="body">Fewer layers than Full-GNN.</text>
+
+  <rect x="885" y="360" width="255" height="8" rx="4" fill="#7c3aed"/>
+  <text x="909" y="404" class="card-title">Tiny-GNN + PINN</text>
+  <text x="909" y="428" class="card-subtitle">SAME TINY FORWARD PATH</text>
+  <text x="909" y="463" class="mono">L = Ldata + λ · Lphysics</text>
+  <text x="909" y="487" class="body">Physics target: one diffusion step</text>
+  <text x="909" y="511" class="body">with zero-valued boundaries</text>
+  <line x1="909" y1="533" x2="1116" y2="533" stroke="#ede9fe"/>
+  <text x="909" y="560" class="body-strong">Training-only constraint</text>
+  <text x="909" y="584" class="body">λ chosen by validation MSE.</text>
+
+  <path d="M188 628V660H1012V628" stroke="#475569" stroke-width="2" fill="none"/>
+  <path d="M600 660V688" class="arrow"/>
+
+  <g filter="url(#shadow)">
+    <rect x="335" y="695" width="530" height="72" rx="14" fill="#ffffff" stroke="#cbd5e1"/>
+  </g>
+  <text x="600" y="725" text-anchor="middle" class="card-title">Predicted temperature at t + 1</text>
+  <text x="600" y="749" text-anchor="middle" class="body">Same node-level output shape for all four approaches</text>
+
+  <text x="60" y="793" class="small">Committed experiment grid: seeds 40–50 · checkpoints 50 / 100 / 300 · h 4 / 8 / 16 / 32 · data fractions 0.125–1.0 · noise 0–0.20</text>
+</svg>

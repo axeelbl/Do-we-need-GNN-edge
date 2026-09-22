@@ -4,6 +4,12 @@ Reproducible experiments comparing MLP, Full-GNN, Tiny-GNN and Tiny-GNN + PINN m
 
 Este repositorio contiene el código y los resultados finales usados para la memoria del TFG, comparando MLP, Full-GNN, Tiny-GNN y Tiny-GNN + PINN en predicción térmica sobre una cuadrícula/grafo.
 
+## Arquitectura experimental
+
+![Comparación de la arquitectura y el entrenamiento de MLP, Full-GNN, Tiny-GNN y Tiny-GNN con pérdida física](docs/model-comparison.svg)
+
+*Las cuatro variantes predicen la temperatura del siguiente paso. MLP procesa cada nodo de forma independiente; las GNN usan el grafo de vecindad, y PINN conserva la arquitectura Tiny-GNN pero añade una pérdida de difusión solo durante el entrenamiento. El checkpoint y `lambda` se seleccionan con MSE de validación antes de evaluar en test.*
+
 ## Estructura de entrega
 
 - `src/`: código activo de simulación, modelos, entrenamiento y sweep corregido.
